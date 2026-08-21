@@ -39,7 +39,7 @@ Ajouter un critère = 1 colonne dans `build/build_data.py` + 1 entrée dans
 
 | Critère | Source potentielle | Effort |
 |---|---|---|
-| Sismique — zonage réglementaire **par commune** (remplace proxy dépt) | Géorisques | 🟢 |
+| Sismique — zonage réglementaire **par commune** (remplace proxy dépt) | Géorisques : `GET /api/v1/zonage_sismique?code_insee=X` (sans clé, ~20 codes/requête, 5 req/s) — voir `build/SOURCES.md` | 🟢 |
 | Mouvement de terrain / cavités souterraines | Géorisques (BSS, cavités) | 🟢 |
 | Incendie de forêt (exposition, ZIF) | Géorisques / IGN | 🟡 |
 | Avalanche | Géorisques | 🟡 |

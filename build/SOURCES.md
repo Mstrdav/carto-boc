@@ -20,15 +20,64 @@ entre communes, direction déjà appliquée). Les valeurs brutes sont conservée
 Fond communes + centroïdes : [`geo.api.gouv.fr/communes`](https://geo.api.gouv.fr/)
 (RÉEL, ~34 970 communes avec centre, population, département).
 
-## Remplacer un proxy par du réel
+## Remplacer le proxy sismique par le zonage réel (Géorisques, PAR COMMUNE)
 
-1. Récupère le dataset (idéalement clé = code INSEE commune).
-2. Dans `build_data.py` → `main()`, remplace le calcul du critère par une jointure
-   sur le code INSEE (ajoute un `fetch_*` + un cache dans `build/cache/`).
-3. Ajuste la `direction` du critère dans `data/criteria.js` si besoin.
-4. `python build/build_data.py`.
+Le proxy actuel (`SEISMIC_BY_DEP` dans `build_data.py`) attribue une zone par
+**département**. Le zonage réglementaire est en réalité défini **par commune**
+(décret du 22 octobre 2010, en vigueur depuis le 1er mai 2011). L'API Géorisques
+le fournit **sans clé** — testé depuis ce poste le 2026-08-22.
 
-La normalisation percentile et le moteur de score n'ont pas à changer.
+### Endpoint (vérifié fonctionnel, sans clé API)
+
+```
+GET https://www.georisques.gouv.fr/api/v1/zonage_sismique?code_insee=29019
+```
+
+Réponse (JSON) :
+
+```json
+{"results":1,"page":1,"total_pages":1,
+ "data":[{"code_insee":"29019","libelle_commune":"BREST","code_zone":"2","zone_sismicite":"2 - FAIBLE"}],
+ "response_code":200,"message":null,"next":null,"previous":null}
+```
+
+`code_zone` est l'entier **1..5** à stocker dans `raw.sismique` (la normalisation
+`direction: lower` est déjà en place — petite zone = mieux).
+
+Commande curl équivalente :
+
+```bash
+curl -s "https://www.georisques.gouv.fr/api/v1/zonage_sismique?code_insee=29019" \
+  -H "User-Agent: carto-boc/1.0"
+```
+
+### Contraintes mesurées (à respecter pour un build)
+
+- **Pas de filtre par département** ni par lot global : le paramètre de recherche
+  est `code_insee` (commune). `code_insee=29019,01001` (liste séparée par virgules)
+  fonctionne.
+- **Limite ~20-24 codes INSEE par requête** (au-delà : HTTP 500 « Des paramètres
+  de recherches sont manquants. »). 20 codes = OK, 25+ = 500.
+- **Rate limit : 5 appels/s** pour `api/v1/**` (voir la doc Géorisques).
+  → ~35 000 communes ÷ 20 = ~1 750 requêtes = **~6 min** au rythme max.
+- Alternative *bulk* : jeu de données data.gouv.fr « Zonage sismique de la France »
+  (`https://www.data.gouv.fr/datasets/zonage-sismique-de-la-france-1/`, zip **129 Mo**,
+  couche vecteur issue du fichier Excel planseisme.fr/BRGM de janvier 2015). Trop lourd
+  pour un build léger, mais utilisable hors-ligne en prétraitement.
+
+### Marche à suivre pour l'intégrer
+
+1. Dans `build_data.py`, ajouter un `fetch_seismic()` qui itère `COMMUNES_URL` par
+   lots de ~20 codes INSEE, respecte `time.sleep(0.21)` (5 req/s), et écrit un cache
+   `build/cache/seismic.json` (`{insee: zone}`) via `cached()`.
+2. Remplacer `raw["sismique"].append(seismic_zone(dep))` par
+   `raw["sismique"].append(seismic_by_insee.get(c["code"], 2))` (défaut 2 = faible).
+3. Mettre à jour la `source` du critère dans `data/criteria.js`
+   (« RÉEL — zonage sismique Géorisques par commune (décret 2010) »).
+4. `python build/build_data.py` puis `node build/test_carto.js`.
+
+**Non fait en itération 2** (build ~6 min de fetch + recalcul > seuil de risque) :
+documentation uniquement, données `data/communes.js` laissées inchangées.
 
 ## Notes
 

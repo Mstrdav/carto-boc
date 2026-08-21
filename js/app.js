@@ -124,24 +124,9 @@
     return best;
   }
 
-  /* ---------- helpers d'affichage ---------- */
-  const score100 = s => Math.round((s == null ? 0 : s) * 100);
-  // formate une valeur brute selon le critère (distances, prix, zones…)
-  function fmtRaw(cr, raw) {
-    if (raw == null || raw === "") return "—";
-    const n = +raw;
-    const fr = (x, d) => x.toLocaleString("fr-FR", {
-      minimumFractionDigits: d || 0, maximumFractionDigits: d || 0,
-    });
-    switch (cr.id) {
-      case "gare":
-      case "mer": return fr(n, n < 10 ? 1 : 0) + " km";
-      case "sismique": return "zone " + fr(n) + " / 5";
-      case "prix": return fr(n) + " €/m²";
-      case "pollution": return "indice " + fr(n, 1);
-      default: return fr(n, 1) + (cr.unit ? " " + cr.unit : "");
-    }
-  }
+  /* ---------- helpers d'affichage (délégués à js/format.js, testables) ---------- */
+  const score100 = Format.score100;
+  const fmtRaw = Format.fmtRaw;
 
   /* ---------- tooltip + popup ---------- */
   const tip = document.createElement("div");
@@ -387,6 +372,19 @@
     try { applyWeights(JSON.parse(saved)); } catch (e) { /* ignore corrompu */ }
   }
 
-  // poignée de debug (console du navigateur) : window.__carto.draw() force un redraw
-  window.__carto = { map, points, draw: () => points._draw(), recolor };
+  // poignée de debug (console du navigateur) :
+  //  - window.__carto.hitTestAt(lat, lng) -> commune sous (lat,lng) (ou null), prouve
+  //    que la grille de hit-test est opérationnelle dès le premier rendu (sans pan/zoom).
+  //  - window.__carto.gridCellCount() -> nb de cellules de la grille (0 = pas encore construite).
+  window.__carto = {
+    map,
+    points,
+    draw: () => points._draw(),
+    recolor,
+    hitTestAt: (lat, lng) => {
+      const p = map.latLngToContainerPoint([lat, lng]);
+      return hitTest(p.x, p.y, 7);
+    },
+    gridCellCount: () => grid.size,
+  };
 })();

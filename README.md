@@ -50,12 +50,15 @@ index.html            page (pur HTML/CSS/JS, pas de framework lourd)
 css/style.css
 js/score.js           moteur de score (moyenne pondérée) + self-check
 js/io.js              export / import / agrégation
+js/format.js          formatage des valeurs (popup) — pur, testable
 js/app.js             carte Leaflet + panneau de critères
 data/criteria.js      registre des critères (édite ici pour en ajouter)
 data/communes.js      données précalculées (généré, ~7,6 Mo)
 vendor/               Leaflet (vendoré, pas de CDN au runtime)
 build/build_data.py   régénère data/communes.js depuis les sources ouvertes
 build/SOURCES.md      provenance des données + comment remplacer les proxys
+build/test_carto.js   suite de tests Node (score / io / format) — `node build/test_carto.js`
+build/test_mobile.html  harnais 390×844 (iframe) : vérifie le responsive + le hit-test
 ```
 
 ## Ajouter / modifier un critère (après le questionnaire)
@@ -68,7 +71,18 @@ build/SOURCES.md      provenance des données + comment remplacer les proxys
 `direction: "lower"` = petite valeur = mieux (ex. prix, distance) ;
 `"higher"` = grande valeur = mieux.
 
+## Debug (console navigateur)
+
+`window.__carto` expose : `hitTestAt(lat, lng)` (commune sous un point, ou `null`),
+`gridCellCount()` (cellules de la grille de hit-test), `map`, `points`, `draw()`,
+`recolor()`. Utile pour prouver que le hit-test répond dès le premier affichage,
+sans pan/zoom préalable.
+
 ## Vérifs
 
-- `node js/score.js` → self-check du moteur de score.
+- `node build/test_carto.js` → suite de tests (score, import/export/agrégation, formatage).
+  Échoue (exit 1) au moindre FAIL.
+- `node js/score.js` → self-check du moteur de score (inchangé).
+- `python -m http.server 8787` puis ouvrir `http://127.0.0.1:8787/build/test_mobile.html`
+  → harnais 390×844 : responsive mobile + hit-test au premier affichage (auto-vérifié).
 - `python build/build_data.py` → régénère les données (réseau requis).
