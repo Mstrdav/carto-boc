@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Carto — où acheter ensemble</title>
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <button id="panel-toggle" type="button" aria-label="Ouvrir / fermer le panneau" aria-expanded="false">☰</button>
+  <div id="scrim"></div>
+  <aside id="panel">
+    <h1>Où chercher ?</h1>
+    <p class="sub">Répartis 100 points entre les critères. La carte se colore en direct :
+      plus une commune est verte, plus elle correspond à tes priorités.</p>
+
+    <label class="field">Ton prénom
+      <input id="prenom" type="text" placeholder="ex. Colin" autocomplete="off">
+    </label>
+
+    <label class="field">Rechercher une commune
+      <input id="search" type="text" placeholder="ex. Quimper" autocomplete="off">
+    </label>
+    <ul id="search-results" class="search-results"></ul>
+
+    <div id="budget">Points restants : <strong id="remaining">100</strong> / 100</div>
+
+    <div id="criteria"><!-- curseurs injectés par app.js --></div>
+
+    <div class="actions">
+      <button id="btn-export" type="button">Exporter ma répartition</button>
+      <label class="import-btn">Importer / agréger
+        <input id="file-import" type="file" accept="application/json" multiple hidden>
+      </label>
+      <button id="btn-reset" type="button" class="ghost">Réinitialiser</button>
+    </div>
+
+    <div id="status"></div>
+
+    <section id="top">
+      <h2>Meilleures communes</h2>
+      <ol id="top-list"><!-- rempli par app.js --></ol>
+    </section>
+
+    <p class="foot">gare &amp; mer : données réelles · sismique, prix, pollution : proxys
+      (voir build/SOURCES.md).</p>
+  </aside>
+
+  <div id="map"></div>
+  <div id="legend"><span>moins propice</span><span id="legend-min" class="val">–</span><i class="ramp"></i><span id="legend-max" class="val">–</span><span>plus propice</span></div>
+  <div id="loading">Chargement des 35 000 communes…</div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="data/criteria.js"></script>
+  <script src="data/communes.js"></script>
+  <script src="js/score.js"></script>
+  <script src="js/io.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

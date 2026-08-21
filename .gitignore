@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Caches de données téléchargées (régénérables via `python build/build_data.py`)
+build/cache/
+
+# OS
+.DS_Store
+Thumbs.db
