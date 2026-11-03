@@ -3,60 +3,50 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Carto — où acheter ensemble</title>
+  <title>Carto BOC : où acheter ensemble</title>
   <link rel="stylesheet" href="vendor/leaflet.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <button id="panel-toggle" type="button" aria-label="Ouvrir / fermer le panneau" aria-expanded="false">☰</button>
-  <div id="scrim"></div>
-  <aside id="panel">
+  <button id="menu">☰</button>
+
+  <div id="panel">
     <h1>Où chercher ?</h1>
-    <p class="sub">Répartis 100 points entre les critères. La carte se colore en direct :
-      plus une commune est verte, plus elle correspond à tes priorités.</p>
+    <p class="small">Répartis 100 points entre les critères. Plus une commune est verte, plus elle te correspond.</p>
 
-    <label class="field">Ton prénom
-      <input id="prenom" type="text" placeholder="ex. Colin" autocomplete="off">
-    </label>
+    <input id="nom" placeholder="Ton prénom">
+    <input id="search" placeholder="Rechercher une commune">
+    <ul id="results"></ul>
 
-    <label class="field">Rechercher une commune
-      <input id="search" type="text" placeholder="ex. Quimper" autocomplete="off">
-    </label>
-    <ul id="search-results" class="search-results"></ul>
-
-    <div id="budget">Points restants : <strong id="remaining">100</strong> / 100</div>
-
-    <div id="criteria"><!-- curseurs injectés par app.js --></div>
-
-    <div class="actions">
-      <button id="btn-export" type="button">Exporter ma répartition</button>
-      <label class="import-btn">Importer / agréger
-        <input id="file-import" type="file" accept="application/json" multiple hidden>
-      </label>
-      <button id="btn-reset" type="button" class="ghost">Réinitialiser</button>
+    <div id="group-box" hidden>
+      <b>Vue groupe</b> : <span id="group-names"></span>
+      <button id="group-leave">Revenir à mes points</button>
     </div>
 
-    <div id="status"></div>
+    <p>Points restants : <b id="left">100</b> / 100</p>
+    <div id="sliders"></div>
 
-    <section id="top">
-      <h2>Meilleures communes</h2>
-      <ol id="top-list"><!-- rempli par app.js --></ol>
-    </section>
+    <button id="copy">Copier mon lien</button>
+    <button id="group-open">Groupe</button>
+    <button id="reset">Remettre à zéro</button>
+    <p id="status" class="small"></p>
 
-    <p class="foot">gare &amp; mer : données réelles · sismique, prix, pollution : proxys
-      (voir build/SOURCES.md).</p>
-  </aside>
+    <div id="group-form" hidden>
+      <p class="small">Colle les liens de chacun, un par ligne. La carte montre la somme des points.</p>
+      <textarea id="links" rows="6"></textarea>
+      <button id="group-go">Voir le groupe</button>
+    </div>
+
+    <h2>Meilleures communes</h2>
+    <ol id="top"></ol>
+  </div>
 
   <div id="map"></div>
-  <div id="legend"><span>moins propice</span><span id="legend-min" class="val">–</span><i class="ramp"></i><span id="legend-max" class="val">–</span><span>plus propice</span></div>
-  <div id="loading">Chargement des 35 000 communes…</div>
+  <canvas id="dots"></canvas>
+  <div id="tip"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="data/criteria.js"></script>
   <script src="data/communes.js"></script>
-  <script src="js/score.js"></script>
-  <script src="js/io.js"></script>
-  <script src="js/format.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
