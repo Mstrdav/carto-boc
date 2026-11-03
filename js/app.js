@@ -42,8 +42,12 @@ for (var i = 0; i < COMMUNES.length; i++) {
   COMMUNES[i].y = p.y;
 }
 
+// the canvas lives inside the map, so Leaflet moves and zooms it together with the tiles
 var canvas = document.getElementById("dots");
+canvas.className = "leaflet-zoom-animated";
+map.getPane("overlayPane").appendChild(canvas);
 var ctx = canvas.getContext("2d");
+var canvasCorner;  // map position of the canvas top left corner
 
 // screen position of every commune, recomputed after each move
 function placeAll() {
@@ -62,6 +66,8 @@ function draw() {
     canvas.height = size.y;
   }
   ctx.clearRect(0, 0, size.x, size.y);
+  L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
+  canvasCorner = map.containerPointToLatLng([0, 0]);
   placeAll();
   var r = map.getZoom() < 8 ? 2 : 4;
   for (var i = 0; i < COMMUNES.length; i++) {
@@ -72,6 +78,12 @@ function draw() {
   }
 }
 map.on("move zoom resize", draw);
+
+// during the zoom animation, stretch the drawn canvas like the tiles, then redraw at the end
+map.on("zoomanim", function (e) {
+  var corner = map._latLngToNewLayerPoint(canvasCorner, e.zoom, e.center);
+  L.DomUtil.setTransform(canvas, corner, map.getZoomScale(e.zoom));
+});
 
 // commune under the mouse (nearest within 8 px), or null
 function communeAt(x, y) {
