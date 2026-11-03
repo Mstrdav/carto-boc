@@ -12,13 +12,14 @@
 
   <div id="panel">
     <h1>Où chercher ?</h1>
-    <p class="small">Répartis 100 points entre les critères. Plus une commune est verte, plus elle te correspond.
-      Une commune très mauvaise sur un critère important est fortement pénalisée, même si elle est bonne ailleurs.</p>
+    <p class="small">Donne tes 100 points aux critères qui comptent pour toi. Vert = ça te correspond.</p>
 
-    <input id="nom" placeholder="Ton prénom">
+    <input id="nom" placeholder="Prénom">
     <input id="search" placeholder="Rechercher une commune">
     <ul id="results"></ul>
     <label class="check"><input type="checkbox" id="melt"> Vue par régions (lissée)</label>
+    <label id="melt-size-box" class="small" hidden>Taille des zones : <b id="melt-size-val">15</b> km
+      <input type="range" id="melt-size" min="5" max="60" step="5" value="15"></label>
 
     <div id="group-box" hidden>
       <b>Vue groupe</b> : <span id="group-names"></span>

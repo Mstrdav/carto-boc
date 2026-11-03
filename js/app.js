@@ -85,26 +85,38 @@ function draw() {
 }
 map.on("move zoom resize", draw);
 
-// ---------- melt view: mean score on a grid of about 17 km cells ----------
+// ---------- melt view: mean score on a grid of square cells ----------
 
-var CELL_LAT = 0.15, CELL_LON = 0.2;
-var cells = [];  // { x0, y0, x1, y1 (map pixels at zoom 0), sum, n, color }
+var cellKm = 15;
+var CELL_LAT, CELL_LON;
+var cells = [];   // { x0, y0, x1, y1 (map pixels at zoom 0), sum, n, mean, color }
+var cellOf = {};  // "row,col" -> index in cells
 
-// put each commune in its cell, once
-var cellOf = {};
-for (var i = 0; i < COMMUNES.length; i++) {
-  var row = Math.floor(COMMUNES[i][2] / CELL_LAT), col = Math.floor(COMMUNES[i][3] / CELL_LON);
-  var key = row + "," + col;
-  if (cellOf[key] == null) {
-    var a = map.project([(row + 1) * CELL_LAT, col * CELL_LON], 0);
-    var b = map.project([row * CELL_LAT, (col + 1) * CELL_LON], 0);
-    cellOf[key] = cells.length;
-    cells.push({ x0: a.x, y0: a.y, x1: b.x, y1: b.y });
-  }
-  COMMUNES[i].cell = cellOf[key];
+function cellKey(lat, lon) {
+  return Math.floor(lat / CELL_LAT) + "," + Math.floor(lon / CELL_LON);
 }
 
-// mean score of each cell, red to green between the worst and the best cell
+// put each commune in its cell (again each time the size changes)
+function buildCells() {
+  CELL_LAT = cellKm / 111;  // 1° of latitude = 111 km
+  CELL_LON = cellKm / 76;   // 1° of longitude = about 76 km in France
+  cells = [];
+  cellOf = {};
+  for (var i = 0; i < COMMUNES.length; i++) {
+    var row = Math.floor(COMMUNES[i][2] / CELL_LAT), col = Math.floor(COMMUNES[i][3] / CELL_LON);
+    var key = row + "," + col;
+    if (cellOf[key] == null) {
+      var a = map.project([(row + 1) * CELL_LAT, col * CELL_LON], 0);
+      var b = map.project([row * CELL_LAT, (col + 1) * CELL_LON], 0);
+      cellOf[key] = cells.length;
+      cells.push({ x0: a.x, y0: a.y, x1: b.x, y1: b.y });
+    }
+    COMMUNES[i].cell = cellOf[key];
+  }
+}
+buildCells();
+
+// mean score of each cell, red to green between the worst and the best cell (grey with no points)
 function melt() {
   cells.forEach(function (c) { c.sum = 0; c.n = 0; });
   for (var i = 0; i < COMMUNES.length; i++) {
@@ -119,7 +131,7 @@ function melt() {
   });
   cells.forEach(function (c) {
     var t = (c.mean - min) / Math.max(1, max - min);
-    c.color = "hsl(" + Math.round(t * 120) + ", 70%, 45%)";
+    c.color = noPoints() ? GREY : "hsl(" + Math.round(t * 120) + ", 70%, 45%)";
   });
 }
 
@@ -135,7 +147,18 @@ function drawCells(size) {
   });
 }
 
-document.getElementById("melt").onchange = draw;
+document.getElementById("melt").onchange = function () {
+  document.getElementById("melt-size-box").hidden = !this.checked;
+  draw();
+};
+
+document.getElementById("melt-size").oninput = function () {
+  cellKm = +this.value;
+  document.getElementById("melt-size-val").textContent = cellKm;
+  buildCells();
+  melt();
+  draw();
+};
 
 // during the zoom animation, stretch the drawn canvas like the tiles, then redraw at the end
 map.on("zoomanim", function (e) {
@@ -160,12 +183,20 @@ function communeAt(x, y) {
 
 var tip = document.getElementById("tip");
 map.on("mousemove", function (e) {
-  var i = communeAt(e.containerPoint.x, e.containerPoint.y);
-  if (i == null) {
+  var text = null;
+  if (document.getElementById("melt").checked) {
+    // melt view: the score of the area under the mouse
+    var c = cells[cellOf[cellKey(e.latlng.lat, e.latlng.lng)]];
+    if (c) text = "Zone de " + cellKm + " km (" + c.n + " communes)" + (noPoints() ? "" : " : <b>" + Math.round(c.mean) + "</b>/100");
+  } else {
+    var i = communeAt(e.containerPoint.x, e.containerPoint.y);
+    if (i != null) text = COMMUNES[i][0] + (noPoints() ? "" : " : <b>" + scores[i] + "</b>/100");
+  }
+  if (text == null) {
     tip.style.display = "none";
     return;
   }
-  tip.innerHTML = COMMUNES[i][0] + " : <b>" + scores[i] + "</b>/100";
+  tip.innerHTML = text;
   tip.style.display = "block";
   tip.style.left = e.originalEvent.clientX + 12 + "px";
   tip.style.top = e.originalEvent.clientY + "px";
@@ -185,7 +216,7 @@ function slug(text) {
 function showCommune(i, zoom) {
   var c = COMMUNES[i];
   var name = c[0], cp = c[1];
-  var html = "<div class='popup'><b>" + name + "</b> (" + cp + ") : <b>" + scores[i] + "/100</b><table>";
+  var html = "<div class='popup'><b>" + name + "</b> (" + cp + ")" + (noPoints() ? "" : " : <b>" + scores[i] + "/100</b>") + "<table>";
   for (var k = 0; k < CRITERIA.length; k++) {
     var raw = c[5][k] == null ? "?" : c[5][k].toLocaleString("fr-FR");
     if (CRITERIA[k].id == "prix" && c[6]) raw = "~" + raw;  // no sale here, mean of the communes around
@@ -205,12 +236,21 @@ function showCommune(i, zoom) {
 
 // ---------- scores and colours ----------
 
+var GREY = "#999";
+
+// true when nobody gave any point yet: the map stays grey
+function noPoints() {
+  var weights = group || points;
+  for (var id in weights) if (weights[id] > 0) return false;
+  return true;
+}
+
 function update() {
   var weights = group || points;
   var total = 0;
   for (var id in weights) total += weights[id];
 
-  // score = weighted harmonic mean of the criterion scores (equal weights when no point is given):
+  // score = weighted harmonic mean of the criterion scores:
   // a bad score on an important criterion pulls the total down hard, good ones elsewhere can't make up for it
   var min = 100, max = 0;
   for (var i = 0; i < COMMUNES.length; i++) {
@@ -227,7 +267,7 @@ function update() {
   // red (worst) to green (best), stretched between min and max
   for (var i = 0; i < COMMUNES.length; i++) {
     var t = (scores[i] - min) / Math.max(1, max - min);
-    COMMUNES[i].color = "hsl(" + Math.round(t * 120) + ", 70%, 45%)";
+    COMMUNES[i].color = total > 0 ? "hsl(" + Math.round(t * 120) + ", 70%, 45%)" : GREY;
   }
   melt();
   draw();
@@ -235,6 +275,10 @@ function update() {
 }
 
 function showTop() {
+  if (noPoints()) {
+    document.getElementById("top").innerHTML = "<li class='small'>Répartis des points pour voir les meilleures communes.</li>";
+    return;
+  }
   var order = COMMUNES.map(function (c, i) { return i; });
   order.sort(function (a, b) { return scores[b] - scores[a]; });
   var html = "";
@@ -366,6 +410,7 @@ document.getElementById("menu").onclick = function () {
 var start = readLink(location.hash ? location.hash : localStorage.getItem("carto") || "");
 points = start.points;
 document.getElementById("nom").value = start.nom == "?" ? "" : start.nom;
+document.getElementById("melt-size-box").hidden = !document.getElementById("melt").checked;
 showSliders();
 save();
 update();
