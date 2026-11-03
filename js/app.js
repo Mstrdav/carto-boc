@@ -152,15 +152,16 @@ function update() {
   var total = 0;
   for (var id in weights) total += weights[id];
 
-  // score = weighted mean of the criterion scores (equal weights when no point is given)
+  // score = weighted geometric mean of the criterion scores (equal weights when no point is given):
+  // one very bad score on an important criterion pulls the total down, a good one elsewhere can't make up for it
   var min = 100, max = 0;
   for (var i = 0; i < COMMUNES.length; i++) {
     var sum = 0;
     for (var k = 0; k < CRITERIA.length; k++) {
       var w = total > 0 ? (weights[CRITERIA[k].id] || 0) / total : 1 / CRITERIA.length;
-      sum += w * COMMUNES[i][4][k];
+      sum += w * Math.log(Math.max(1, COMMUNES[i][4][k]));  // 1 instead of 0, log(0) is infinite
     }
-    scores[i] = Math.round(sum);
+    scores[i] = Math.round(Math.exp(sum));
     if (scores[i] < min) min = scores[i];
     if (scores[i] > max) max = scores[i];
   }
