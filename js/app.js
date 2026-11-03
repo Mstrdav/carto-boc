@@ -69,6 +69,12 @@ function draw() {
   L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
   canvasCorner = map.containerPointToLatLng([0, 0]);
   placeAll();
+  var melted = document.getElementById("melt").checked;
+  canvas.style.opacity = melted ? 0.55 : 1;  // see-through cells, the map stays readable
+  if (melted) {
+    drawCells(size);
+    return;
+  }
   var r = map.getZoom() < 8 ? 2 : 4;
   for (var i = 0; i < COMMUNES.length; i++) {
     var c = COMMUNES[i];
@@ -78,6 +84,58 @@ function draw() {
   }
 }
 map.on("move zoom resize", draw);
+
+// ---------- melt view: mean score on a grid of about 17 km cells ----------
+
+var CELL_LAT = 0.15, CELL_LON = 0.2;
+var cells = [];  // { x0, y0, x1, y1 (map pixels at zoom 0), sum, n, color }
+
+// put each commune in its cell, once
+var cellOf = {};
+for (var i = 0; i < COMMUNES.length; i++) {
+  var row = Math.floor(COMMUNES[i][2] / CELL_LAT), col = Math.floor(COMMUNES[i][3] / CELL_LON);
+  var key = row + "," + col;
+  if (cellOf[key] == null) {
+    var a = map.project([(row + 1) * CELL_LAT, col * CELL_LON], 0);
+    var b = map.project([row * CELL_LAT, (col + 1) * CELL_LON], 0);
+    cellOf[key] = cells.length;
+    cells.push({ x0: a.x, y0: a.y, x1: b.x, y1: b.y });
+  }
+  COMMUNES[i].cell = cellOf[key];
+}
+
+// mean score of each cell, red to green between the worst and the best cell
+function melt() {
+  cells.forEach(function (c) { c.sum = 0; c.n = 0; });
+  for (var i = 0; i < COMMUNES.length; i++) {
+    cells[COMMUNES[i].cell].sum += scores[i];
+    cells[COMMUNES[i].cell].n++;
+  }
+  var min = 100, max = 0;
+  cells.forEach(function (c) {
+    c.mean = c.sum / c.n;
+    min = Math.min(min, c.mean);
+    max = Math.max(max, c.mean);
+  });
+  cells.forEach(function (c) {
+    var t = (c.mean - min) / Math.max(1, max - min);
+    c.color = "hsl(" + Math.round(t * 120) + ", 70%, 45%)";
+  });
+}
+
+function drawCells(size) {
+  var scale = Math.pow(2, map.getZoom());
+  var topLeft = map.getPixelBounds().min;
+  cells.forEach(function (c) {
+    var x0 = Math.floor(c.x0 * scale - topLeft.x), y0 = Math.floor(c.y0 * scale - topLeft.y);
+    var x1 = Math.ceil(c.x1 * scale - topLeft.x), y1 = Math.ceil(c.y1 * scale - topLeft.y);
+    if (x1 < 0 || y1 < 0 || x0 > size.x || y0 > size.y) return;
+    ctx.fillStyle = c.color;
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  });
+}
+
+document.getElementById("melt").onchange = draw;
 
 // during the zoom animation, stretch the drawn canvas like the tiles, then redraw at the end
 map.on("zoomanim", function (e) {
@@ -170,6 +228,7 @@ function update() {
     var t = (scores[i] - min) / Math.max(1, max - min);
     COMMUNES[i].color = "hsl(" + Math.round(t * 120) + ", 70%, 45%)";
   }
+  melt();
   draw();
   showTop();
 }

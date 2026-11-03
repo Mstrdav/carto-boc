@@ -20,6 +20,9 @@ button { padding: 6px 10px; margin: 0 4px 6px 0; font: inherit; cursor: pointer;
 .slider label { display: flex; justify-content: space-between; }
 .slider input { margin: 0; padding: 0; }
 
+.check { display: block; margin-bottom: 8px; cursor: pointer; }
+.check input { width: auto; margin: 0 4px 0 0; }
+
 #group-box { background: #eef6ee; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
 
 #tip { position: fixed; display: none; pointer-events: none; z-index: 3000; background: #fff;
